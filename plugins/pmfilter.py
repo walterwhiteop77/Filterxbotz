@@ -16,6 +16,13 @@ from database.refer import referdb
 from database.users_chats_db import db
 import asyncio
 import re
+from database.ia_filterdb import ( 
+    has_free_files_left,
+    increment_user_free_files,
+    get_remaining_free_files,
+    get_user_free_files_count
+)
+from info import FREE_FILES_COUNT
 import math
 import random
 import pytz
@@ -36,6 +43,88 @@ BUTTONS0 = {}
 BUTTONS1 = {}
 BUTTONS2 = {}
 SPELL_CHECK = {}
+
+@Client.on_message(filters.group & filters.text & filters.incoming)
+async def auto_filter(client, message):
+    """
+    Modified auto_filter with free files logic
+    """
+    
+    # ... your existing code to get search query, settings etc ...
+    
+    # Get user ID
+    user_id = message.from_user.id
+    
+    # ========== NEW: FREE FILES LOGIC ==========
+    # Check if user has free files remaining
+    has_free = await has_free_files_left(user_id)
+    
+    if has_free:
+        # User has free files - skip ALL verification checks
+        logger.info(f"User {user_id} using free file")
+        
+        # Your existing code to search and send files
+        # (Keep all your existing file search and button creation code here)
+        # ... files, offset, total_results = await get_search_results(search) ...
+        # ... build buttons ...
+        
+        # After building buttons and BEFORE sending:
+        # Send the files
+        k = await message.reply_text(
+            text=f"<b>📁 Files Found: {total_results}\n\n🔍 Search: {search}</b>",
+            reply_markup=InlineKeyboardMarkup(buttons),
+            parse_mode=enums.ParseMode.HTML
+        )
+        
+        # Increment counter AFTER successful send
+        await increment_user_free_files(user_id)
+        
+        # Get updated remaining count
+        remaining = await get_remaining_free_files(user_id)
+        
+        # Notify user about free files
+        if remaining > 0:
+            notification = await message.reply_text(
+                f"✅ <b>File sent successfully!</b>\n\n"
+                f"🎁 <b>Free Files Remaining: {remaining}/{FREE_FILES_COUNT}</b>\n\n"
+                f"💡 You can still get {remaining} more file(s) without verification!",
+                parse_mode=enums.ParseMode.HTML
+            )
+        else:
+            notification = await message.reply_text(
+                f"✅ <b>File sent successfully!</b>\n\n"
+                f"⚠️ <b>Free files exhausted!</b>\n\n"
+                f"<b>From next search, you'll need to:</b>\n"
+                f"• ✓ Join required channels\n"
+                f"• ✓ Complete verification\n\n"
+                f"👉 Click /start to proceed with verification!",
+                parse_mode=enums.ParseMode.HTML
+            )
+        
+        # Auto-delete notification after 15 seconds
+        await asyncio.sleep(15)
+        try:
+            await notification.delete()
+        except:
+            pass
+        
+        return  # Exit function - file already sent
+    
+    # ========== ORIGINAL VERIFICATION FLOW ==========
+    # If no free files, continue with normal checks
+    
+    # Check verification (your existing code)
+    verify = await check_verification(client, message.chat.id, user_id) 
+    if not verify:
+        # Your existing verification message
+        return
+    
+    # Check force subscribe (your existing code)
+    if AUTH_CHANNEL and not await is_subscribed(client, message):
+        # Your existing force subscribe message
+        return
+    
+    # ... rest of your existing code to send files normally ...
 
 
 @Client.on_message(filters.group & filters.text & filters.incoming)
