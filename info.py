@@ -43,6 +43,8 @@ FSUB_PICS = (environ.get('FSUB_PICS', 'https://graph.org/file/7478ff3eac37f4329c
 # ============================
 ADMINS = [int(admin) if id_pattern.search(admin) else admin for admin in environ.get('ADMINS', '8463771873').split()] # Replace with the actual admin ID(s) to add
 CHANNELS = [int(ch) if id_pattern.search(ch) else ch for ch in environ.get('CHANNELS', '-1002551545839 -1002601777610').split()]  # Channel id for auto indexing (make sure bot is admin)
+FREE_FILES_COUNT = int(environ.get('FREE_FILES_COUNT', 2))  # Number of free files per user
+
 
 LOG_CHANNEL = int(environ.get('LOG_CHANNEL', '-1002927765158'))  # Log channel id (make sure bot is admin)
 BIN_CHANNEL = int(environ.get('BIN_CHANNEL', '-1002941039022'))  # Bin channel id (make sure bot is admin)
