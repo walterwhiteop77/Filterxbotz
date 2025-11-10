@@ -417,3 +417,47 @@ async def dreamxbotz_get_series(limit: int = 30) -> Dict[str, List[int]]:
     except Exception as e:
         logger.error(f"Error in dreamxbotz_get_series: {e}")
         return []
+
+
+
+    # Add these functions at the end of the file:
+
+async def get_user_free_files_count(user_id: int):
+    """Get how many free files a user has already used"""
+    user = await users.find_one({'id': int(user_id)})
+    if user:
+        return user.get('free_files_used', 0)
+    return 0
+
+
+async def increment_user_free_files(user_id: int):
+    """Increment the free files counter by 1"""
+    return await users.update_one(
+        {'id': int(user_id)},
+        {'$inc': {'free_files_used': 1}},
+        upsert=True
+    )
+
+
+async def has_free_files_left(user_id: int):
+    """Check if user still has free files remaining"""
+    from info import FREE_FILES_COUNT
+    used = await get_user_free_files_count(user_id)
+    return used < FREE_FILES_COUNT
+
+
+async def get_remaining_free_files(user_id: int):
+    """Get count of remaining free files"""
+    from info import FREE_FILES_COUNT
+    used = await get_user_free_files_count(user_id)
+    remaining = FREE_FILES_COUNT - used
+    return max(0, remaining)
+
+
+async def reset_user_free_files(user_id: int):
+    """Reset free files counter for a user (admin command)"""
+    return await users.update_one(
+        {'id': int(user_id)},
+        {'$set': {'free_files_used': 0}},
+        upsert=True
+    )
